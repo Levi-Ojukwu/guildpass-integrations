@@ -10,6 +10,8 @@ import { useSiweAuth } from '@/lib/wallet/providers'
 import { AuthError } from '@/lib/api/live'
 import { useState } from 'react'
 import { LoadingState, ErrorState, EmptyState, safeErrorMessage } from '@/components/ui/api-states'
+import { FeatureGate } from '@/components/feature-gate'
+import { features } from '@/lib/features'
 
 function SessionExpiredBanner() {
   const { signIn, isSigningIn } = useSiweAuth()
@@ -68,61 +70,63 @@ export default function PoliciesPage() {
   })
 
   return (
-    <AdminGuard>
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Access Policies</h1>
+    <FeatureGate enabled={features.adminPolicies} name="Access Policies">
+      <AdminGuard>
+        <div className="space-y-4">
+          <h1 className="text-2xl font-semibold">Access Policies</h1>
 
-        {sessionExpired && <SessionExpiredBanner />}
+          {sessionExpired && <SessionExpiredBanner />}
 
-        <Card>
-          <CardHeader><CardTitle>Resources</CardTitle></CardHeader>
-          <CardContent className="space-y-2">
-            {isLoading ? (
-              <LoadingState message="Loading policies…" />
-            ) : isError ? (
-              <ErrorState
-                title="Failed to load policies"
-                message={safeErrorMessage(error)}
-                onRetry={() => refetch()}
-              />
-            ) : !policies?.length ? (
-              <EmptyState message="No resources configured." />
-            ) : (
-              policies.map((p) => (
-                <div key={p.resourceId} className="flex items-center gap-2">
-                  <div className="w-40 text-sm">{p.resourceId}</div>
-                  <select
-                    id={`policy-tier-${p.resourceId}`}
-                    className="border rounded-md h-9 px-2 text-sm"
-                    value={p.minTier ?? 'free'}
-                    onChange={(e) => mutate({ ...p, minTier: e.target.value as AccessPolicy['minTier'] })}
-                    disabled={isPending}
-                  >
-                    <option value="free">free</option>
-                    <option value="standard">standard</option>
-                    <option value="pro">pro</option>
-                  </select>
-                  <Button
-                    id={`policy-save-${p.resourceId}`}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => mutate({ ...p })}
-                    disabled={isPending}
-                  >
-                    {isPending ? 'Saving…' : 'Save'}
-                  </Button>
-                </div>
-              ))
-            )}
-            {mutateError && (
-              <ErrorState
-                title="Failed to save policy"
-                message={safeErrorMessage(mutateErrorValue)}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </AdminGuard>
+          <Card>
+            <CardHeader><CardTitle>Resources</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {isLoading ? (
+                <LoadingState message="Loading policies…" />
+              ) : isError ? (
+                <ErrorState
+                  title="Failed to load policies"
+                  message={safeErrorMessage(error)}
+                  onRetry={() => refetch()}
+                />
+              ) : !policies?.length ? (
+                <EmptyState message="No resources configured." />
+              ) : (
+                policies.map((p) => (
+                  <div key={p.resourceId} className="flex items-center gap-2">
+                    <div className="w-40 text-sm">{p.resourceId}</div>
+                    <select
+                      id={`policy-tier-${p.resourceId}`}
+                      className="border rounded-md h-9 px-2 text-sm"
+                      value={p.minTier ?? 'free'}
+                      onChange={(e) => mutate({ ...p, minTier: e.target.value as AccessPolicy['minTier'] })}
+                      disabled={isPending}
+                    >
+                      <option value="free">free</option>
+                      <option value="standard">standard</option>
+                      <option value="pro">pro</option>
+                    </select>
+                    <Button
+                      id={`policy-save-${p.resourceId}`}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => mutate({ ...p })}
+                      disabled={isPending}
+                    >
+                      {isPending ? 'Saving…' : 'Save'}
+                    </Button>
+                  </div>
+                ))
+              )}
+              {mutateError && (
+                <ErrorState
+                  title="Failed to save policy"
+                  message={safeErrorMessage(mutateErrorValue)}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </AdminGuard>
+    </FeatureGate>
   )
 }

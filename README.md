@@ -102,6 +102,36 @@ See [`.env.example`](./.env.example) for a ready-to-copy template.
 
 ---
 
+## Feature Flags
+
+Modules that are experimental or not yet production-ready are controlled by environment variables. Setting a flag to `"false"` hides the corresponding navigation item and shows a clear "unavailable" state when the route is visited directly.
+
+| Variable | Default (mock mode) | Default (prod) | Module |
+| -------- | ------------------- | -------------- | ------ |
+| `NEXT_PUBLIC_FEATURE_ADMIN_POLICIES` | `true` | `true` | Access policy editor in `/admin/policies` |
+| `NEXT_PUBLIC_FEATURE_EVENTS` | `true` | `false` | Event access page at `/events/*` |
+| `NEXT_PUBLIC_FEATURE_RESOURCES` | `true` | `true` | Gated resources at `/resources/*` |
+| `NEXT_PUBLIC_FEATURE_ANALYTICS` | `false` | `false` | Analytics module (not yet built) |
+| `NEXT_PUBLIC_FEATURE_GOVERNANCE` | `false` | `false` | Governance module (not yet built) |
+
+**How flags work:**
+
+- All flags are read at build time from `NEXT_PUBLIC_*` environment variables. No remote flag service is involved.
+- An omitted variable falls back to the default shown above.
+- In **mock/demo mode** (`NEXT_PUBLIC_MOCK_MODE=true`), flags for `adminPolicies`, `events`, and `resources` default to `true` so the full demo works locally without any extra configuration.
+- Flags for deferred modules (`analytics`, `governance`) default to `false` in every environment and must be explicitly set to `"true"` to enable them.
+- Navigation links for disabled modules are automatically hidden.
+- Visiting a disabled route directly renders a clear "Feature unavailable" message instead of broken content.
+
+**Adding a new flag:**
+
+1. Add the typed field to `FeatureFlags` in `lib/features.ts` and wire up the `flag()` call.
+2. Document the variable in `.env.example` with its recommended production default.
+3. Wrap the relevant page with `<FeatureGate enabled={features.yourFlag} name="Module Name">`.
+4. Filter the corresponding nav item using `features.yourFlag`.
+
+---
+
 ## Scripts
 
 ```bash
