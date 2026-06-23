@@ -12,6 +12,8 @@
   "include": [
     "../lib/api/optimistic.ts",
     "../lib/api/types.ts",
+    "../lib/api/access-decision.ts",
+    "../lib/query/*.ts",
     "./*.test.ts"
   ]
 }

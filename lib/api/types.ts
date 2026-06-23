@@ -65,6 +65,22 @@ export interface SiweAuthSession {
   expiresAt: string
 }
 
+// ── Access Decision (cached per wallet + resource) ───────────────────────────
+
+/**
+ * Result of an access check for a specific resource.
+ * This is the value stored in the route-level access cache.
+ * Only safe display metadata is included — never sensitive tokens.
+ */
+export interface AccessDecision {
+  /** Whether access is granted */
+  allowed: boolean
+  /** Human-readable reason for the decision (safe for display) */
+  reason: string
+  /** ISO timestamp of when the check was performed */
+  checkedAt: string
+}
+
 // ── Client-side State Types ──────────────────────────────────────────────────
 
 /**

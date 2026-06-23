@@ -30,6 +30,7 @@ import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/reac
 import { getApi } from '@/lib/api'
 import { SiweAuthSession } from '@/lib/api/types'
 import { clearAuthSession, loadAuthSession, storeAuthSession } from '@/lib/session'
+import { accessKeys } from '@/lib/query'
 
 // ── Wagmi config (unchanged) ──────────────────────────────────────────────────
 
@@ -95,13 +96,14 @@ function SiweAuthProvider({ children }: PropsWithChildren) {
     }
   }, [address])
 
-  // Clear session when wallet disconnects
+  // Clear session and cached access decisions when wallet disconnects
   useEffect(() => {
     if (!address && authSession) {
       setAuthSession(null)
       clearAuthSession()
+      queryClient.removeQueries({ queryKey: accessKeys.all })
     }
-  }, [address, authSession])
+  }, [address, authSession, queryClient])
 
   const signIn = useCallback(async () => {
     if (!address) {
@@ -169,6 +171,7 @@ function SiweAuthProvider({ children }: PropsWithChildren) {
     setError(null)
     disconnect()
     queryClient.removeQueries({ queryKey: ['session'] })
+    queryClient.removeQueries({ queryKey: accessKeys.all })
   }, [authSession, address, disconnect, queryClient])
 
   const value: SiweAuthContextValue = {

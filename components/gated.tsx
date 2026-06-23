@@ -1,8 +1,14 @@
 'use client'
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { useAccount } from 'wagmi'
 import { useQuery } from '@tanstack/react-query'
 import { getApi, type MembershipTier, type Role } from '@/lib/api'
+import { computeAccessDecision } from '@/lib/api/access-decision'
+import {
+  accessKeys,
+  ACCESS_DECISION_STALE_TIME,
+  ACCESS_DECISION_GC_TIME,
+} from '@/lib/query'
 import Link from 'next/link'
 import { buttonVariants } from './ui/button'
 import { LoadingState, ErrorState, safeErrorMessage } from './ui/api-states'
@@ -10,19 +16,40 @@ import { LoadingState, ErrorState, safeErrorMessage } from './ui/api-states'
 export function Gated({
   children,
   minTier,
-  roles
+  roles,
+  resourceId
 }: {
   children: ReactNode
   minTier?: MembershipTier
   roles?: Role[]
+  resourceId?: string
 }) {
-  const { address } = useAccount()
-  const { data: session, isLoading, isError, error, refetch } = useQuery({
+  const { address, chain } = useAccount()
+  const env = String(chain?.id ?? 1)
+
+  const { data: session, isLoading: sessionLoading, isError, error, refetch } = useQuery({
     queryKey: ['session', address],
     queryFn: () => getApi(address).getSession(),
     enabled: !!address,
-    retry: 1
+    retry: 1,
   })
+
+  const { data: cachedDecision, isLoading: decisionLoading } = useQuery({
+    queryKey: accessKeys.decision(env, address ?? '', resourceId ?? ''),
+    queryFn: () => computeAccessDecision(session!, { minTier, roles }),
+    enabled: !!session && !!resourceId,
+    staleTime: ACCESS_DECISION_STALE_TIME,
+    gcTime: ACCESS_DECISION_GC_TIME,
+    retry: 1,
+  })
+
+  const fallbackDecision = useMemo(
+    () => session ? computeAccessDecision(session, { minTier, roles }) : undefined,
+    [session, minTier, roles]
+  )
+
+  const decision = resourceId ? cachedDecision : fallbackDecision
+  const isLoading = resourceId ? (sessionLoading || decisionLoading) : sessionLoading
 
   if (!address) {
     return <AccessDenied reason="Please connect your wallet to continue." />
@@ -42,14 +69,8 @@ export function Gated({
     )
   }
 
-  const hasRole = roles ? roles.some(r => session?.roles?.includes(r)) : true
-  const tiers = ['free', 'standard', 'pro'] as MembershipTier[]
-  const meetsTier = minTier
-    ? tiers.indexOf(session?.membership?.tier as MembershipTier) >= tiers.indexOf(minTier)
-    : true
-
-  if (!hasRole || !meetsTier || !session?.membership?.active) {
-    return <AccessDenied reason="Your current membership does not grant access." />
+  if (!decision?.allowed) {
+    return <AccessDenied reason={decision?.reason ?? 'Your current membership does not grant access.'} />
   }
 
   return <>{children}</>
